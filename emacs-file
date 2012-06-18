@@ -1,0 +1,94 @@
+(load "/home/stromsund/WorkspaceSettings/google-c-style.el")
+(add-hook 'c-mode-common-hook 'google-set-c-style)
+(add-hook 'c-mode-common-hook 'google-make-newline-indent)
+
+(setq my-font "Droid Sans Mono-10")
+(set-default-font my-font)
+
+(add-to-list 'load-path "~/.emacs.d/") ;;указываем где будут лежать файлы расширений
+(add-to-list 'load-path "~/.emacs.d/ecb-snap")
+
+(custom-set-variables
+  ;; custom-set-variables was added by Custom.
+  ;; If you edit it by hand, you could mess it up, so be careful.
+  ;; Your init file should contain only one such instance.
+  ;; If there is more than one, they won't work right.
+ '(column-number-mode t)
+ '(default-input-method "russian-computer")
+ '(display-time-mode t)
+ '(ecb-options-version "2.40")
+ '(tool-bar-mode nil))
+ ;;вот он тут точно не нужен
+
+(setq inhibit-startup-message t) ;;не показывать сообщение при старте
+(setq indent-tabs-mode nil)
+(setq-default indent-tabs-mode nil)    ; use only spaces and no tabs
+
+(fset 'yes-or-no-p 'y-or-n-p) ;;не заставляйте меня печать yes целиком
+
+(setq default-tab-width 4) ;;подифолту
+
+(require 'color-theme) ;;подгружаем "модуль раскраски"
+(color-theme-charcoal-black)
+
+(require 'flymake)
+(add-hook 'find-file-hook 'flymake-find-file-hook)
+
+(global-set-key [f11] 'flymake-display-err-menu-for-current-line)
+(global-set-key [f12] 'flymake-goto-next-error)
+
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+
+(defun fullscreen (&optional f)
+  (interactive)
+  (x-send-client-message nil 0 nil "_NET_WM_STATE" 32
+                         '(2 "_NET_WM_STATE_MAXIMIZED_VERT" 0))
+  (x-send-client-message nil 0 nil "_NET_WM_STATE" 32
+                         '(2 "_NET_WM_STATE_MAXIMIZED_HORZ" 0)))
+
+(load-file "~/.emacs.d/cedet-1.1/common/cedet.el")
+(semantic-load-enable-excessive-code-helpers)
+
+(fullscreen)
+(custom-set-faces
+  ;; custom-set-faces was added by Custom.
+  ;; If you edit it by hand, you could mess it up, so be careful.
+  ;; Your init file should contain only one such instance.
+  ;; If there is more than one, they won't work right.
+ )
+
+(require 'popup)
+
+(defun convert-tag-to-menu-item (tag)
+  (popup-make-item (semantic-tag-name tag) :value (semantic-tag-start tag)))
+
+(defun get-function-list ()
+  (interactive)
+  (let* ((all-functions (semantic-find-tags-by-class 'function (semantic-something-to-tag-table (current-buffer))))
+         (all-methods (mapcan
+                       (lambda (type)
+                         (mapcar
+                          (lambda (tag) 
+                            (semantic-tag-put-attribute-no-side-effect tag :parent (semantic-tag-name type)))
+                          (semantic-find-tags-by-class 'function (semantic-tag-type-members type))))
+                       (semantic-find-tags-by-class 'type (current-buffer))))
+         (all-tags (nconc all-functions all-methods))
+         (sorted-tags (sort all-tags (lambda (lhs rhs) (string-lessp (semantic-tag-name lhs) (semantic-tag-name rhs)))))
+         (menu-items (mapcar 'convert-tag-to-menu-item sorted-tags)))
+    (goto-char (popup-menu* menu-items))))
+
+(global-set-key [f1] 'get-function-list)
+
+;; disable version control
+(setq vc-handled-backends nil)
+
+(require 'magit)
+
+(defun run-current-test-file ()
+  (interactive)
+  (compilation-start (concat "python "
+                             (buffer-file-name))))
+
+(global-set-key (kbd "C-c t r") 'run-current-test-file)
