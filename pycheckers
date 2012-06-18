@@ -1,0 +1,11 @@
+#!/bin/sh
+
+PEP8_OPTIONS="--repeat"
+
+if egrep -q "^  [A-Za-z0-9]" "$1"
+then
+    PEP8_OPTIONS="$PEP8_OPTIONS --ignore=E111"
+fi
+pep8 $PEP8_OPTIONS "$1"
+pyflakes "$1"
+true
