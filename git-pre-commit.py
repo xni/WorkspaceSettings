@@ -9,12 +9,13 @@ It checks for
   * PEP8 for committed python files (show warnings)
 """
 
+import os.path
 import re
 import subprocess
 import sys
 
 
-TRAILING_WHITESPACE = re.compile(r"\s+\n$")
+TRAILING_WHITESPACE = re.compile(r"[ \t]+[\r]?\n$")
 
 
 def get_changed_files():
@@ -39,12 +40,16 @@ def check_for_spaces(filename):
         last_line = None
         for linenum, line in enumerate(checked_file):
             if TRAILING_WHITESPACE.search(line):
-                errors.append("{0}:{1}:{2}".format(filename, linenum,
-                                                   line.replace(" ", "~")))
+                errors.append("{0}:{1}:{2}".format(
+                        filename,
+                        linenum,
+                        line.replace(" ", "~")\
+                            .replace("\r", "\\r")\
+                            .replace("\n", "\\n\n")))
             last_line = line
 
-        if last_line and not last_line.endswith("\n"):
-            errors.append(r"{0}:\No new line in the end of file".format(
+        if last_line and not last_line.endswith("\n") and linenum > 0:
+            errors.append("{0}:\\No new line in the end of file\n".format(
                 filename))
     return errors
 
@@ -77,7 +82,7 @@ def check_python(filename):
                                    stderr=subprocess.PIPE)
     pep_process.wait()
     if pep_process.stdout.read():
-        errors.append("{0}:PEP8 check failed".format(filename))
+        errors.append("{0}:PEP8 check failed\n".format(filename))
 
     return errors
 
@@ -91,18 +96,30 @@ def make_check(filename):
     return errors
 
 
+def is_text_file(filename):
+    """
+    Checks, if the file is text file
+    """
+    filename = filename.lower()
+    return not (filename.endswith(".png") or
+                filename.endswith(".jpg") or
+                filename.endswith(".7z"))
+
+
 def main():
     """
     Main
     """
     if len(sys.argv) == 1:
-        changed_files = get_changed_files()
+        changed_files = [filename for filename in get_changed_files()
+                         if is_text_file(filename)]
     else:
         changed_files = sys.argv[1:]
 
     errors = []
     for filename in changed_files:
-        errors += make_check(filename)
+        if os.path.isfile(filename):
+            errors += make_check(filename)
 
     if errors:
         print "".join(errors)
